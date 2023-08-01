@@ -1,6 +1,6 @@
-using REPLACE_PKG
+using OLGameEngine
 using Test
 
-@testset "REPLACE_PKG.jl" begin
+@testset "OLGameEngine.jl" begin
     # Write your tests here.
 end

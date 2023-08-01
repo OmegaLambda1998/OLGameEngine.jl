@@ -1,14 +1,14 @@
 using Documenter
 push!(LOAD_PATH, "../src/")
-using REPLACE_PKG
+using OLGameEngine
 
-DocMeta.setdocmeta!(REPLACE_PKG, :DocTestSetup, :(using REPLACE_PKG); recursive=true)
+DocMeta.setdocmeta!(OLGameEngine, :DocTestSetup, :(using OLGameEngine); recursive=true)
 
 makedocs(
-    sitename="REPLACE_PKG Documentation",
-    modules = [REPLACE_PKG],
+    sitename="OLGameEngine Documentation",
+    modules = [OLGameEngine],
     pages = [
-        "REPLACE_PKG" => "index.md",
+        "OLGameEngine" => "index.md",
     ],
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
@@ -16,5 +16,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/OmegaLambda1998/REPLACE_PKG.jl.git"
+    repo = "github.com/OmegaLambda1998/OLGameEngine.jl.git"
 )
