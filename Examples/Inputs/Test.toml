@@ -1,0 +1,26 @@
+[ global ]
+    output_path = "../Outputs/Test"
+
+[ attributes ]
+    SDL_GL_MULTISAMPLEBUFFERS = 16
+    SDL_GL_MULTISAMPLESAMPLES = 16
+
+[ window ]
+    name = "Test Game"
+    x = "centered"
+    y = "centered"
+    w = 1000
+    h = 1000
+    resizable = true
+
+[ renderer ]
+    flags = [
+        "SDL_RENDERER_ACCELERATED",
+        "SDL_RENDERER_PRESENTVSYNC"
+    ]
+
+[ hints ]
+    SDL_HINT_RENDER_SCALE_QUALITY = "linear"
+
+[ game ]
+    background = "#264e68"
