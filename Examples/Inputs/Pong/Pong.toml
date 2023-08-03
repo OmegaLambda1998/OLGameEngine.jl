@@ -15,3 +15,7 @@
 
 [ hints ]
     SDL_HINT_RENDER_SCALE_QUALITY = "linear"
+
+[ game ]
+    [ game.components ]
+        title = "./components/title.jl"

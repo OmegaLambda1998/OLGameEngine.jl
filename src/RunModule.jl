@@ -104,7 +104,7 @@ function setup(toml::Dict{String,Any})
             component_file = joinpath(toml["GLOBAL"]["INPUT_PATH"], component_file)
         end
         component_file = abspath(component_file)
-        @debug "Adding Component: $component_name"
+        @debug "Adding Component: $component_name from file $component_file"
         if isfile(component_file)
             include(component_file)
             @invokelatest add_component(game)
@@ -112,6 +112,8 @@ function setup(toml::Dict{String,Any})
             error("Component file $component_file does not exist")
         end
     end
+
+    @info "Finished Setup"
 
     return game
 end
