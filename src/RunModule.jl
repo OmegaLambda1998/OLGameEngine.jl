@@ -1,32 +1,42 @@
 module RunModule
 
+# Internal Packages
+include("SystemModule.jl")
+using .SystemModule
+include("GameModule.jl")
+using .GameModule
+include("InputModule.jl")
+using .InputModule
+include("PhysicsModule.jl")
+using .PhysicsModule
+include("AIModule.jl")
+using .AIModule
+include("AudioModule.jl")
+using .AudioModule
+include("RenderModule.jl")
+using .RenderModule
+include("WorldModule.jl")
+using .WorldModule
+include("GUIModule.jl")
+using .GUIModule
+include("EntityModule.jl")
+using .EntityModule
+
 # External Packages
 using SimpleDirectMediaLayer
 using SimpleDirectMediaLayer.LibSDL2
 using Colors
 
-# Internal Packages
-include("GameModule.jl")
-using .GameModule
-
 # Exports
 export run_OLGameEngine
 
+# Global constants are stored in `Constants.jl`
 include("Constants.jl")
 
-function Base.convert(::Type{SDL_GLattr}, attr_name::AbstractString)
-    try
-        return str_to_attr[attr_name] # Defined in Constants.jl
-    catch e
-        if isa(e, KeyError)
-            throw(ErrorException("Unknown SDL attribute $attr_name."))
-        else
-            throw(e)
-        end
-    end
-end
-
-function setup(toml::Dict)
+"""
+Setup everything needed, including the Window, the Renderer, and the Game object
+"""
+function setup(toml::Dict{String,Any})
     @info "Setting SDL attributes"
     attributes = get(toml, "ATTRIBUTES", Dict{String,Any}())
     for (attribute, value) in attributes
@@ -41,7 +51,7 @@ function setup(toml::Dict)
     window_opts = get(toml, "WINDOW", Dict{String,Any}())
     str_to_win = Dict{String,Any}(
         "centered" => SDL_WINDOWPOS_CENTERED,
-        "underfined" => SDL_WINDOWPOS_UNDEFINED,
+        "undefined" => SDL_WINDOWPOS_UNDEFINED,
     )
     name = get(window_opts, "NAME", "OLGameEngine")
     @debug "Window name: $name"
@@ -55,9 +65,9 @@ function setup(toml::Dict)
         y = str_to_win[y]
     end
     @debug "Window y: $y"
-    w = get(window_opts, "W", 1000)
+    w = get(window_opts, "WIDTH", 1000)
     @debug "Window w: $w"
-    h = get(window_opts, "H", 1000)
+    h = get(window_opts, "HEIGHT", 1000)
     @debug "Window h: $h"
     win = SDL_CreateWindow(name, x, y, w, h, SDL_WINDOW_SHOWN)
     resizable = get(window_opts, "RESIZABLE", true)
@@ -78,51 +88,136 @@ function setup(toml::Dict)
         SDL_SetHint(hint, value)
     end
 
+
     @info "Creating Game"
     game_opts = get(toml, "GAME", Dict{String,Any}())
-    background = parse(Colorant, (get(game_opts, "BACKGROUND", "#000000")))
-    @debug "Background: $background"
-    game = Game(win, renderer, background)
+    game = Game(win, renderer)
+
+    message_log = joinpath(toml["GLOBAL"]["OUTPUT_PATH"], "messages.log")
+    add_log!(game, "message_log", message_log)
+
+    @info "Preparing Components"
+    components = get(game_opts, "COMPONENTS", Dict{String,Any}())
+    for (component_name, component_file) in components
+
+        if !isabspath(component_file)
+            component_file = joinpath(toml["GLOBAL"]["INPUT_PATH"], component_file)
+        end
+        component_file = abspath(component_file)
+        @debug "Adding Component: $component_name"
+        if isfile(component_file)
+            include(component_file)
+            @invokelatest add_component(game)
+        else
+            error("Component file $component_file does not exist")
+        end
+    end
+
     return game
 end
 
-function prep_scene(game::Game)
-    SDL_SetRenderDrawColor(game.renderer, colorant_to_rgb(game.background)..., 255)
+"""
+Clear the render buffer and prepare for the next frame
+"""
+function prep_stage(game::Game)
     SDL_RenderClear(game.renderer)
 end
 
-function eval_input(game::Game)
-    close = false
+"""
+Read inputs and send `EventMessage`
+"""
+function input_stage(game::Game)
+    quit = false
     event_ref = Ref{SDL_Event}()
     while Bool(SDL_PollEvent(event_ref))
         evt = event_ref[]
         evt_ty = evt.type
         # Handle quitting
         if (evt_ty == SDL_QUIT)
-            close = true
+            quit = true
             break
+        else
+            msg = EventMessage(evt)
+            send_message!(game, msg)
         end
     end
-    return close
+    return quit
 end
 
-function present_scene(game::Game)
+"""
+Handle physics
+"""
+function physics_stage(game::Game)
+end
+
+"""
+Handle world changes
+"""
+function world_stage(game::Game)
+end
+
+"""
+Handle AI
+"""
+function ai_stage(game::Game)
+end
+
+"""
+Render everything to the render buffer
+"""
+function render_stage(game::Game)
+    send_important_message!(game, RenderMessage(game))
+end
+
+"""
+Handle Audio
+"""
+function audio_stage(game::Game)
+end
+
+"""
+Draw the render buffer
+"""
+function draw_stage(game::Game)
+    for zorder in sort(collect(keys(game.render_bus)))
+        render_bus = game.render_bus[zorder]
+        while length(render_bus) > 0
+            task = pop!(render_bus)
+            task()
+        end
+    end
     SDL_RenderPresent(game.renderer)
 end
 
+"""
+Continuously schedule the latest task in the message bus
+"""
+function handle_all_messages!(game::Game)
+    while true
+        (system, message), task = take!(game.message_bus)
+        errormonitor(schedule(task))
+    end
+end
+
+"""
+Main game loop
+"""
 function main_loop(game::Game)
     try
-        close = false
-        while !close
-            prep_scene(game)
-            close = eval_input(game)
-            if close
-                break
-            end
-            present_scene(game)
-            SDL_Delay(16)
+        errormonitor(@async handle_all_messages!(game))
+        while !game.quit
+            prep_stage(game)
+            game.quit = input_stage(game)
+            physics_stage(game)
+            world_stage(game)
+            ai_stage(game)
+            audio_stage(game)
+            render_stage(game)
+            draw_stage(game)
         end
     finally
+        @info "Quitting"
+        send_important_message!(game, QuitMessage())
         SDL_DestroyRenderer(game.renderer)
         SDL_DestroyWindow(game.window)
         SDL_Quit()
@@ -131,6 +226,7 @@ end
 
 function run_OLGameEngine(toml::Dict)
     game = setup(toml)
-    main_loop(game)
+    @sync main_loop(game)
 end
+
 end

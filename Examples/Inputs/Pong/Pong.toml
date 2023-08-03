@@ -1,0 +1,17 @@
+[ global ]
+    output_path = "../../Outputs/Pong"
+
+[ attributes ]
+    SDL_GL_MULTISAMPLEBUFFERS = 16
+    SDL_GL_MULTISAMPLESAMPLES = 16
+
+[ window ]
+    name = "Pong"
+    width = 500
+    height = 500
+
+[ renderer ]
+    flags = ["SDL_RENDERER_ACCELERATED", "SDL_RENDERER_PRESENTVSYNC"]
+
+[ hints ]
+    SDL_HINT_RENDER_SCALE_QUALITY = "linear"
