@@ -9,9 +9,6 @@ using ArgParse
 include("RunModule.jl")
 using .RunModule: run_OLGameEngine
 
-# Exports
-export main 
-
 Base.@ccallable function julia_main()::Cint
     try
         main()
@@ -42,6 +39,7 @@ function main()
     toml = setup_input(toml_path, verbose)
     run_OLGameEngine(toml)
 end
+export main
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()

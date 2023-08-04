@@ -6,22 +6,19 @@ module SystemModule
 # External Packages 
 using Dates
 
-# Exports
-export System
-export Message
-export handle_message!
-export QuitMessage
-
-
 abstract type System end
+export System
 
 abstract type Message end
+export Message
 
 # Generic handle message
 # If there is no dispatch match for system and message, this will run
 function handle_message!(system::System, message::Message)
 end
+export handle_message!
 
 struct QuitMessage <: Message end
+export QuitMessage
 
 end

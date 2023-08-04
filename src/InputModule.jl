@@ -8,11 +8,8 @@ using ..SystemModule
 using SimpleDirectMediaLayer
 using SimpleDirectMediaLayer.LibSDL2
 
-# Exports
-export InputMessage
-export EventMessage
-
 abstract type InputMessage <: Message end
+export InputMessage
 
 """
 A message containing an SDL Event
@@ -20,6 +17,7 @@ A message containing an SDL Event
 struct EventMessage <: InputMessage
     event::SDL_Event
 end
+export EventMessage
 
 function Base.show(io::IO, msg::EventMessage)
     event = msg.event

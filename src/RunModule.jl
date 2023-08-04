@@ -1,6 +1,8 @@
 module RunModule
 
 # Internal Packages
+include("ConstantsModule.jl")
+using .ConstantsModule
 include("SystemModule.jl")
 using .SystemModule
 include("GameModule.jl")
@@ -26,12 +28,6 @@ using .EntityModule
 using SimpleDirectMediaLayer
 using SimpleDirectMediaLayer.LibSDL2
 using Colors
-
-# Exports
-export run_OLGameEngine
-
-# Global constants are stored in `Constants.jl`
-include("Constants.jl")
 
 """
 Setup everything needed, including the Window, the Renderer, and the Game object
@@ -230,5 +226,6 @@ function run_OLGameEngine(toml::Dict)
     game = setup(toml)
     @sync main_loop(game)
 end
+export run_OLGameEngine
 
 end
