@@ -81,12 +81,27 @@ end
 export physical_to_relative
 
 """
-Get a destination reference rectangle given relative x, y, width, and height.
+Get a rectangle given relative x, y, width, and height.
 """
 function get_rect(game::Game, x::Float64, y::Float64, width::Float64, height::Float64)
     x, y, width, height = relative_to_physical(game, x, y, width, height)
     dest_ref = Ref(SDL_Rect(x, y, width, height))
     return dest_ref
+end
+
+mutable struct Composite <: RenderableSystem
+    parts::Vector{RenderableSystem}
+end
+export Composite
+
+function quit(system::Composite)
+    return quit.(system.parts)
+end
+
+function render(system::Composite, game::Game)
+    for part in system.parts
+        render(part, game)
+    end
 end
 
 mutable struct Image <: RenderableSystem
@@ -166,9 +181,11 @@ end
 function render(rectangle::Rectangle, game::Game)
     rectangle.rect = get_rect(game, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
     task = () -> begin
-        r, g, b = 
-        SDL_SetRenderDrawColor
+        r, g, b = colorant_to_rgb(rectangle.colour)
+        SDL_SetRenderDrawColor(game.renderer, r, g, b, 255)
+        SDL_RenderFillRect(game.renderer, rectangle.rect)
     end
+    add_render_task!(game, task, rectangle.zorder)
 end
 
 

@@ -16,6 +16,7 @@ Game objects contain the SDL window, the SDL renderer, a set of Systems, a messa
 mutable struct Game
     window::Ptr{SDL_Window}
     renderer::Ptr{SDL_Renderer}
+    background_colour::Colorant
     systems::Dict{String,System}
     message_bus::Channel{Pair{Pair{DataType,DataType},Task}}
     render_bus::Dict{Int64,Vector{Function}}
@@ -24,8 +25,8 @@ mutable struct Game
 end
 export Game
 
-function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer})
-    return Game(window, renderer, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Task}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), false)
+function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant)
+    return Game(window, renderer, background_colour, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Task}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), false)
 end
 
 function add_log!(game::Game, log_name::String, log_file::AbstractString)

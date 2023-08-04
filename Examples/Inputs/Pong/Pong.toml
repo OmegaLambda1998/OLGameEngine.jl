@@ -17,5 +17,7 @@
     SDL_HINT_RENDER_SCALE_QUALITY = "linear"
 
 [ game ]
+    background_colour = "black"
     [ game.components ]
         title = "./components/title.jl"
+        centre_wall = "./components/centre_wall.jl"

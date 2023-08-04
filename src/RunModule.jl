@@ -87,7 +87,8 @@ function setup(toml::Dict{String,Any})
 
     @info "Creating Game"
     game_opts = get(toml, "GAME", Dict{String,Any}())
-    game = Game(win, renderer)
+    background_colour = parse(Colorant, get(game_opts, "BACKGROUND_COLOUR", "black"))
+    game = Game(win, renderer, background_colour)
 
     message_log = joinpath(toml["GLOBAL"]["OUTPUT_PATH"], "messages.log")
     add_log!(game, "message_log", message_log)
@@ -118,6 +119,8 @@ end
 Clear the render buffer and prepare for the next frame
 """
 function prep_stage(game::Game)
+    r, g, b = colorant_to_rgb(game.background_colour)
+    SDL_SetRenderDrawColor(game.renderer, r, g, b, 255)
     SDL_RenderClear(game.renderer)
 end
 
