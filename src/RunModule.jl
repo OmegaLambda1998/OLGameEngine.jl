@@ -202,7 +202,7 @@ Continuously schedule the latest task in the message bus
 function handle_all_messages!(game::Game)
     while true
         (system, message), task = take!(game.message_bus)
-        errormonitor(schedule(task))
+        errormonitor(Threads.@spawn task())
     end
 end
 
@@ -211,7 +211,7 @@ Main game loop
 """
 function main_loop(game::Game)
     try
-        errormonitor(@async handle_all_messages!(game))
+        errormonitor(Threads.@spawn handle_all_messages!(game))
         print_l = true
         while !game.quit
             start_frame = SDL_GetPerformanceCounter()
