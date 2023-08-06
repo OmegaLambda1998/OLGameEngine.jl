@@ -18,6 +18,16 @@
 
 [ game ]
     background_colour = "black"
+    target_fps = 60
     [ game.components ]
-        title = "./components/title.jl"
-        centre_wall = "./components/centre_wall.jl"
+        [ game.components.title ]
+            file = "./components/title.jl"
+        [ game.components.centre_wall ]
+            file = "./components/centre_wall.jl"
+        [ game.components.left_paddle ]
+            file = "./components/paddle.jl"
+            args = [ "left" ] 
+        [ game.components.right_paddle ]
+            file = "./components/paddle.jl"
+            args = [ "right" ] 
+   

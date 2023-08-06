@@ -9,7 +9,7 @@ function add_component(game::Game)
             wall_part = Rectangle(game, x, init_y + ((i - 1) * (height + 0.04)), width, height)
             push!(parts, wall_part)
         end
-        return Composite(parts)
+        return CompositeRender(parts)
     end
-    add_system!(game, "Wall", wall(5))
+    add_system!(game, "wall", wall(5))
 end

@@ -5,6 +5,8 @@ include("ConstantsModule.jl")
 using .ConstantsModule
 include("SystemModule.jl")
 using .SystemModule
+include("ClockModule.jl")
+using .ClockModule
 include("GameModule.jl")
 using .GameModule
 include("InputModule.jl")
@@ -88,14 +90,19 @@ function setup(toml::Dict{String,Any})
     @info "Creating Game"
     game_opts = get(toml, "GAME", Dict{String,Any}())
     background_colour = parse(Colorant, get(game_opts, "BACKGROUND_COLOUR", "black"))
-    game = Game(win, renderer, background_colour)
+    target_fps = get(game_opts, "TARGET_FPS", 60)
+    @debug "Targeting $target_fps FPS"
+    game = Game(win, renderer, background_colour; target_fps=target_fps)
 
     message_log = joinpath(toml["GLOBAL"]["OUTPUT_PATH"], "messages.log")
     add_log!(game, "message_log", message_log)
 
     @info "Preparing Components"
     components = get(game_opts, "COMPONENTS", Dict{String,Any}())
-    for (component_name, component_file) in components
+    for (component_name, component_opts) in components
+        component_file = component_opts["FILE"]
+        component_args = get(component_opts, "ARGS", Vector{Any}())
+        component_kwargs = get(component_opts, "KWARGS", Dict{String,Any}())
 
         if !isabspath(component_file)
             component_file = joinpath(toml["GLOBAL"]["INPUT_PATH"], component_file)
@@ -104,7 +111,7 @@ function setup(toml::Dict{String,Any})
         @debug "Adding Component: $component_name from file $component_file"
         if isfile(component_file)
             include(component_file)
-            @invokelatest add_component(game)
+            @invokelatest add_component(game, component_args...; component_kwargs...)
         else
             error("Component file $component_file does not exist")
         end
@@ -138,8 +145,7 @@ function input_stage(game::Game)
             quit = true
             break
         else
-            msg = EventMessage(evt)
-            send_message!(game, msg)
+            send_important_message!(game, EventMessage(evt))
         end
     end
     return quit
@@ -206,7 +212,17 @@ Main game loop
 function main_loop(game::Game)
     try
         errormonitor(@async handle_all_messages!(game))
+        print_l = true
         while !game.quit
+            start_frame = SDL_GetPerformanceCounter()
+            #l = length(game.message_bus.data)
+            #if l > 0
+            #    @debug "There are $l tasks to schedule"
+            #    print_l = true
+            #elseif print_l
+            #    @debug "All tasks scheduled"
+            #    print_l = false
+            #end
             prep_stage(game)
             game.quit = input_stage(game)
             physics_stage(game)
@@ -215,6 +231,17 @@ function main_loop(game::Game)
             audio_stage(game)
             render_stage(game)
             draw_stage(game)
+            end_frame = SDL_GetPerformanceCounter()
+            elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
+            fps = (1.0 / elapsed)
+            if (fps > game.target_fps)
+                delay = 1000.0 * ((1.0 / game.target_fps) - elapsed)
+                SDL_Delay(floor(delay))
+            end
+            end_frame = SDL_GetPerformanceCounter()
+            elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
+            fps = (1.0 / elapsed)
+            send_important_message!(game, TickMessage(elapsed))
         end
     finally
         @info "Quitting"

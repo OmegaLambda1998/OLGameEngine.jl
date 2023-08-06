@@ -21,12 +21,13 @@ mutable struct Game
     message_bus::Channel{Pair{Pair{DataType,DataType},Task}}
     render_bus::Dict{Int64,Vector{Function}}
     logs::Dict{String,AbstractString}
+    target_fps::Int64
     quit::Bool
 end
 export Game
 
-function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant)
-    return Game(window, renderer, background_colour, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Task}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), false)
+function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant; target_fps::Int64=60)
+    return Game(window, renderer, background_colour, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Task}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), target_fps, false)
 end
 
 function add_log!(game::Game, log_name::String, log_file::AbstractString)
@@ -95,8 +96,12 @@ export send_message!
 Send a message to a specific game system 
 """
 function send_message!(game::Game, message::Message, system::System)
-    task = @task handle_message!(system, message)
-    put!(game.message_bus, (typeof(system) => typeof(message)) => task)
+    if @invokelatest is_subscribed(system, message)
+        task = @task begin
+            @invokelatest handle_message!(system, message)
+        end
+        put!(game.message_bus, (typeof(system) => typeof(message)) => task)
+    end
 end
 
 function send_important_message!(game::Game, message::Message)
@@ -107,7 +112,9 @@ end
 export send_important_message!
 
 function send_important_message!(message::Message, system::System)
-    handle_message!(system, message)
+    if @invokelatest is_subscribed(system, message)
+        @invokelatest handle_message!(system, message)
+    end
 end
 
 function add_render_task!(game::Game, task::Function, zorder::Int64)

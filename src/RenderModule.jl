@@ -11,9 +11,6 @@ using SimpleDirectMediaLayer
 using SimpleDirectMediaLayer.LibSDL2
 using Colors
 
-abstract type RenderableSystem <: System end
-export RenderableSystem
-
 """
 A message which tells Renderable objects to render themselves
 """
@@ -27,15 +24,21 @@ function Base.show(io::IO, message::RenderMessage)
 end
 
 """
+A system which renders to the screen
+"""
+abstract type RenderableSystem <: System end
+export RenderableSystem
+
+function SystemModule.is_subscribed(system::RenderableSystem, message::RenderMessage)
+    return true
+end
+
+"""
 If a system is renderable, render it
 """
 function SystemModule.handle_message!(system::RenderableSystem, message::RenderMessage)
     log_message(message.game, "message_log", "$message -> $system")
     render(system, message.game)
-end
-
-function SystemModule.handle_message!(system::RenderableSystem, message::QuitMessage)
-    quit(system)
 end
 
 """
@@ -89,18 +92,18 @@ function get_rect(game::Game, x::Float64, y::Float64, width::Float64, height::Fl
     return dest_ref
 end
 
-mutable struct Composite <: RenderableSystem
-    parts::Vector{RenderableSystem}
+mutable struct CompositeRender <: CompositeSystem
+    subsystems::Vector{RenderableSystem}
 end
-export Composite
+export CompositeRender
 
-function quit(system::Composite)
-    return quit.(system.parts)
+function SystemModule.is_subscribed(system::CompositeRender, message::RenderMessage)
+    return true
 end
 
-function render(system::Composite, game::Game)
-    for part in system.parts
-        render(part, game)
+function render(composite_system::CompositeRender, game::Game)
+    for system in composite_system.subsystems
+        render(system, game)
     end
 end
 
