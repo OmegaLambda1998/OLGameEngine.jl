@@ -4,6 +4,7 @@ module OLGameEngine
 using TOML
 using BetterInputFiles 
 using ArgParse
+using StatProfilerHTML 
 
 # Internal Packages
 include("RunModule.jl")
@@ -25,6 +26,9 @@ function get_args()
         "--verbose", "-v"
             help = "Increase level of logging verbosity"
             action = :store_true
+        "--profile", "-p"
+            help = "Run profiler"
+            action = :store_true
         "input"
             help = "Path to .toml file"
             required = true
@@ -37,7 +41,11 @@ function main()
     verbose = args["verbose"]
     toml_path = args["input"]
     toml = setup_input(toml_path, verbose)
-    run_OLGameEngine(toml)
+    if args["profile"]
+        @profilehtml run_OLGameEngine(toml)
+    else
+        run_OLGameEngine(toml)
+    end
 end
 export main
 

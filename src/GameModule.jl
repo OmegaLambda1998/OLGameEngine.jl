@@ -21,12 +21,12 @@ mutable struct Game
     message_bus::Channel{Pair{Pair{DataType,DataType},Function}}
     render_bus::Dict{Int64,Vector{Function}}
     logs::Dict{String,AbstractString}
-    target_fps::Int64
+    target_fps::Float64
     quit::Bool
 end
 export Game
 
-function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant; target_fps::Int64=60)
+function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant; target_fps::Float64=60.0)
     return Game(window, renderer, background_colour, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Function}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), target_fps, false)
 end
 

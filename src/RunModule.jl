@@ -91,6 +91,10 @@ function setup(toml::Dict{String,Any})
     game_opts = get(toml, "GAME", Dict{String,Any}())
     background_colour = parse(Colorant, get(game_opts, "BACKGROUND_COLOUR", "black"))
     target_fps = get(game_opts, "TARGET_FPS", 60)
+    if target_fps == "Inf"
+        target_fps = Inf
+    end
+    target_fps = Float64(target_fps)
     @debug "Targeting $target_fps FPS"
     game = Game(win, renderer, background_colour; target_fps=target_fps)
 
@@ -212,17 +216,8 @@ Main game loop
 function main_loop(game::Game)
     try
         errormonitor(Threads.@spawn handle_all_messages!(game))
-        print_l = true
         while !game.quit
             start_frame = SDL_GetPerformanceCounter()
-            #l = length(game.message_bus.data)
-            #if l > 0
-            #    @debug "There are $l tasks to schedule"
-            #    print_l = true
-            #elseif print_l
-            #    @debug "All tasks scheduled"
-            #    print_l = false
-            #end
             prep_stage(game)
             game.quit = input_stage(game)
             physics_stage(game)
