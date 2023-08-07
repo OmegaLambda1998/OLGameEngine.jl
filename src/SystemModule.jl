@@ -23,6 +23,16 @@ function is_subscribed(system::System, message::Message)
 end
 export is_subscribed
 
+function is_whitelisted(system::System, message::Message)
+    return false
+end
+export is_whitelisted
+
+function is_blacklisted(system::System, message::Message)
+    return false
+end
+export is_blacklisted
+
 #
 # Useful pre-defined Systems
 #

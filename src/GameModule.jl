@@ -93,10 +93,13 @@ end
 export send_message!
 
 """
-Send a message to a specific game system 
+Send a message to a specific game system. Only sends the message if the system is subscribed AND not blacklisted, OR if the system is whitelisted.
 """
 function send_message!(game::Game, message::Message, system::System)
-    if @invokelatest is_subscribed(system, message)
+    subscribed = @invokelatest is_subscribed(system, message)
+    blacklisted = @invokelatest is_blacklisted(system, message)
+    whitelisted = @invokelatest is_whitelisted(system, message)
+    if (subscribed && !blacklisted) || whitelisted
         task = () -> @invokelatest handle_message!(system, message)
         put!(game.message_bus, (typeof(system) => typeof(message)) => task)
     end
@@ -109,8 +112,14 @@ function send_important_message!(game::Game, message::Message)
 end
 export send_important_message!
 
+"""
+Send an important message to a specific game system. Only sends the message if the system is subscribed AND not blacklisted, OR if the system is whitelisted.
+"""
 function send_important_message!(message::Message, system::System)
-    if @invokelatest is_subscribed(system, message)
+    subscribed = @invokelatest is_subscribed(system, message)
+    blacklisted = @invokelatest is_blacklisted(system, message)
+    whitelisted = @invokelatest is_whitelisted(system, message)
+    if (subscribed && !blacklisted) || whitelisted
         @invokelatest handle_message!(system, message)
     end
 end
