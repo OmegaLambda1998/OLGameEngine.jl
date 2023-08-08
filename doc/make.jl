@@ -9,6 +9,7 @@ makedocs(
     modules = [OLGameEngine],
     pages = [
         "OLGameEngine" => "index.md",
+        "API" => "api.md"
     ],
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
