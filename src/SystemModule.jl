@@ -58,7 +58,9 @@ end
 Message which tells a system to quit.
 This usually means clearing any memory the system is taking up.
 """
-struct QuitMessage <: Message end
+Base.@kwdef mutable struct QuitMessage <: Message
+    metadata::Dict{String, Any} = Dict{String, Any}()
+end
 export QuitMessage
 
 """

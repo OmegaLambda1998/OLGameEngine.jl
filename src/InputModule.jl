@@ -14,8 +14,9 @@ export InputMessage
 """
 A message containing an SDL Event
 """
-struct EventMessage <: InputMessage
+Base.@kwdef mutable struct EventMessage <: InputMessage
     event::SDL_Event
+    metadata::Dict{String, Any} = Dict{String, Any}()
 end
 export EventMessage
 

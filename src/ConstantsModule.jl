@@ -67,7 +67,7 @@ export str_to_flag
 """
 Convert a Colorant to seperate [0, 255] r g b parameters
 """
-function colorant_to_rgb(c::Colorant)
+function colorant_to_rgb(c::C) where {C<:Colorant}
     c = parse(RGB, c)
     r = Float64(c.r) * 255
     g = Float64(c.g) * 255

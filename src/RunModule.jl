@@ -67,18 +67,18 @@ function setup(toml::Dict{String,Any})
     @debug "Window w: $w"
     h = get(window_opts, "HEIGHT", 1000)
     @debug "Window h: $h"
-    win = SDL_CreateWindow(name, x, y, w, h, SDL_WINDOW_SHOWN)
+    window = SDL_CreateWindow(name, x, y, w, h, SDL_WINDOW_SHOWN)
     resizable = get(window_opts, "RESIZABLE", true)
     if resizable
         @debug "Resizable window"
-        SDL_SetWindowResizable(win, SDL_TRUE)
+        SDL_SetWindowResizable(window, SDL_TRUE)
     end
 
     @info "Creating Renderer"
     render_opts = get(toml, "RENDERER", Dict{String,Any}())
     flags = get(render_opts, "FLAGS", Vector{String}())
     render_flags = reduce(|, map(k -> str_to_flag[k], flags))
-    renderer = SDL_CreateRenderer(win, -1, render_flags)
+    renderer = SDL_CreateRenderer(window, -1, render_flags)
 
     @info "Setting Hints"
     hints = get(toml, "HINTS", Dict{String,Any}())
@@ -96,7 +96,7 @@ function setup(toml::Dict{String,Any})
     end
     target_fps = Float64(target_fps)
     @debug "Targeting $target_fps FPS"
-    game = Game(win, renderer, background_colour; target_fps=target_fps)
+    game = Game(window=window, renderer=renderer, background_colour=background_colour, target_fps=target_fps)
 
     message_log = joinpath(toml["GLOBAL"]["OUTPUT_PATH"], "messages.log")
     add_log!(game, "message_log", message_log)
@@ -149,7 +149,7 @@ function input_stage(game::Game)
             quit = true
             break
         else
-            send_important_message!(game, EventMessage(evt))
+            send_important_message!(game, EventMessage(event=evt))
         end
     end
     return quit
@@ -158,7 +158,8 @@ end
 """
 Handle physics
 """
-function physics_stage(game::Game)
+function physics_stage(game::Game, dt::Float64)
+    send_important_message!(game, PhysicsStepMessage(dt=dt))
 end
 
 """
@@ -174,16 +175,22 @@ function ai_stage(game::Game)
 end
 
 """
-Render everything to the render buffer
-"""
-function render_stage(game::Game)
-    send_important_message!(game, RenderMessage(game))
-end
-
-"""
 Handle Audio
 """
 function audio_stage(game::Game)
+end
+
+"""
+Handle GUI updates
+"""
+function gui_stage(game::Game)
+end
+
+"""
+Render everything (including gui) to the render buffer
+"""
+function render_stage(game::Game)
+    send_important_message!(game, RenderMessage(game=game))
 end
 
 """
@@ -216,15 +223,17 @@ Main game loop
 function main_loop(game::Game)
     try
         errormonitor(Threads.@spawn handle_all_messages!(game))
+        elapsed = 0.0
         while !game.quit
             start_frame = SDL_GetPerformanceCounter()
             prep_stage(game)
             game.quit = input_stage(game)
-            physics_stage(game)
+            physics_stage(game, elapsed)
             world_stage(game)
             ai_stage(game)
             audio_stage(game)
             render_stage(game)
+            gui_stage(game)
             draw_stage(game)
             end_frame = SDL_GetPerformanceCounter()
             elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
@@ -236,7 +245,7 @@ function main_loop(game::Game)
             end_frame = SDL_GetPerformanceCounter()
             elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
             fps = (1.0 / elapsed)
-            send_important_message!(game, TickMessage(elapsed))
+            send_important_message!(game, TickMessage(dt=elapsed))
         end
     finally
         @info "Quitting"

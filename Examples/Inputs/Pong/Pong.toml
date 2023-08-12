@@ -30,4 +30,6 @@
         [ game.components.right_paddle ]
             file = "./components/paddle.jl"
             args = [ "right" ] 
+        #[ game.components.ball ]
+        #    file = "./components/ball.jl"
    

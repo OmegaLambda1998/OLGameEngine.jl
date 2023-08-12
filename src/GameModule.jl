@@ -13,22 +13,18 @@ using Colors
 """
 Game objects contain the SDL window, the SDL renderer, a set of Systems, a message bus and whether the game has been quit or not 
 """
-mutable struct Game
+Base.@kwdef mutable struct Game{C<:Colorant}
     window::Ptr{SDL_Window}
     renderer::Ptr{SDL_Renderer}
-    background_colour::Colorant
-    systems::Dict{String,System}
-    message_bus::Channel{Pair{Pair{DataType,DataType},Function}}
-    render_bus::Dict{Int64,Vector{Function}}
-    logs::Dict{String,AbstractString}
+    background_colour::C = colorant"black"
+    systems::Dict{String,System} = Dict{String,System}()
+    message_bus::Channel{Pair{Pair{DataType,DataType},Function}} = Channel{Pair{Pair{DataType,DataType},Function}}(Inf)
+    render_bus::Dict{Int64,Vector{Function}} = Dict{Int64,Vector{Function}}()
+    logs::Dict{String,AbstractString} = Dict{String,AbstractString}()
     target_fps::Float64
-    quit::Bool
+    quit::Bool = false
 end
 export Game
-
-function Game(window::Ptr{SDL_Window}, renderer::Ptr{SDL_Renderer}, background_colour::Colorant; target_fps::Float64=60.0)
-    return Game(window, renderer, background_colour, Dict{String,System}(), Channel{Pair{Pair{DataType,DataType},Function}}(32), Dict{Int64,Channel{Task}}(), Dict{String,AbstractString}(), target_fps, false)
-end
 
 function add_log!(game::Game, log_name::String, log_file::AbstractString)
     if isfile(log_file)
@@ -66,7 +62,7 @@ export get_centre
 """
 Add a System to game
 """
-function add_system!(game::Game, name::String, system::System)
+function add_system!(game::Game, name::String, system::S) where {S<:System}
     game.systems[name] = system
 end
 export add_system!
@@ -85,7 +81,7 @@ export get_system
 """
 Send a message to all game Systems
 """
-function send_message!(game::Game, message::Message)
+function send_message!(game::Game, message::M) where {M<:Message}
     for system in values(game.systems)
         send_message!(game, message, system)
     end
@@ -95,7 +91,7 @@ export send_message!
 """
 Send a message to a specific game system. Only sends the message if the system is subscribed AND not blacklisted, OR if the system is whitelisted.
 """
-function send_message!(game::Game, message::Message, system::System)
+function send_message!(game::Game, message::M, system::S) where {M<:Message,S<:System}
     subscribed = @invokelatest is_subscribed(system, message)
     blacklisted = @invokelatest is_blacklisted(system, message)
     whitelisted = @invokelatest is_whitelisted(system, message)
@@ -105,7 +101,7 @@ function send_message!(game::Game, message::Message, system::System)
     end
 end
 
-function send_important_message!(game::Game, message::Message)
+function send_important_message!(game::Game, message::M) where {M<:Message}
     for system in values(game.systems)
         send_important_message!(message, system)
     end
@@ -115,7 +111,7 @@ export send_important_message!
 """
 Send an important message to a specific game system. Only sends the message if the system is subscribed AND not blacklisted, OR if the system is whitelisted.
 """
-function send_important_message!(message::Message, system::System)
+function send_important_message!(message::M, system::S) where {M<:Message,S<:System}
     subscribed = @invokelatest is_subscribed(system, message)
     blacklisted = @invokelatest is_blacklisted(system, message)
     whitelisted = @invokelatest is_whitelisted(system, message)

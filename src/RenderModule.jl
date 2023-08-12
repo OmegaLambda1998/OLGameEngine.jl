@@ -14,8 +14,9 @@ using Colors
 """
 A message which tells Renderable objects to render themselves
 """
-struct RenderMessage <: Message
+Base.@kwdef mutable struct RenderMessage <: Message
     game::Game
+    metadata::Dict{String,Any} = Dict{String,Any}()
 end
 export RenderMessage
 
@@ -92,7 +93,7 @@ function get_rect(game::Game, x::Float64, y::Float64, width::Float64, height::Fl
     return dest_ref
 end
 
-mutable struct CompositeRender <: CompositeSystem
+Base.@kwdef mutable struct CompositeRender <: CompositeSystem
     subsystems::Vector{RenderableSystem}
 end
 export CompositeRender
@@ -107,28 +108,28 @@ function render(composite_system::CompositeRender, game::Game)
     end
 end
 
-mutable struct Image <: RenderableSystem
+Base.@kwdef mutable struct ImageRender <: RenderableSystem
     texture::Ptr{SDL_Texture}
     x::Float64
     y::Float64
     width::Float64
     height::Float64
-    zorder::Int64
+    zorder::Int64 = 1
     dest_ref::Base.RefValue{SDL_Rect}
 end
-export Image
+export ImageRender
 
-function Base.show(io::IO, system::Image)
-    print(io, "Image")
+function Base.show(io::IO, system::ImageRender)
+    print(io, "ImageRender")
 end
 
-function quit(image::Image)
+function quit(image::ImageRender)
     SDL_DestroyTexture(image.texture)
 end
 
 function get_texture(game::Game, filepath::AbstractString)
     if !isfile(filepath)
-        error("Image filepath: $filepath does not exist")
+        error("ImageRender filepath: $filepath does not exist")
     end
     surface = IMG_Load(filepath)
     texture = SDL_CreateTextureFromSurface(game.renderer, surface)
@@ -136,52 +137,52 @@ function get_texture(game::Game, filepath::AbstractString)
     return texture
 end
 
-function Image(game::Game, filepath::AbstractString, x::Float64, y::Float64; zorder::Int64=1)
+function ImageRender(game::Game, filepath::AbstractString, x::Float64, y::Float64; zorder::Int64=1)
     texture = get_texture(game, filepath)
     window_width, window_height = get_dimensions(game)
     texture_width, texture_height = Ref{Cint}(0), Ref{Cint}(0)
     SDL_QueryTexture(texture, C_NULL, C_NULL, texture_width, texture_height)
-    width = window_width ÷ texture_width[]
-    height = window_height ÷ texture_height[]
-    return Image(texture, x, y, width, height, zorder, get_rect(game, x, y, width, height))
+    width = Float64(window_width ÷ texture_width[])
+    height = Float64(window_height ÷ texture_height[])
+    return ImageRender(texture, x, y, width, height, zorder, get_rect(game, x, y, width, height))
 end
 
-function Image(game::Game, filepath::AbstractString, x::Float64, y::Float64, width::Float64, height::Float64; zorder::Int64=1)
-    return Image(get_texture(game, filepath), x, y, width, height, zorder, get_rect(game, x, y, width, height))
+function ImageRender(game::Game, filepath::AbstractString, x::Float64, y::Float64, width::Float64, height::Float64; zorder::Int64=1)
+    return ImageRender(get_texture(game, filepath), x, y, width, height, zorder, get_rect(game, x, y, width, height))
 end
 
-function BackgroundImage(game::Game, filepath::AbstractString; zorder::Int64=0)
-    return Image(get_texture(game, filepath), 0, 0, 1, 1, zorder, get_rect(game, 0, 0, 1, 1))
+function BackgroundImageRender(game::Game, filepath::AbstractString; zorder::Int64=0)
+    return ImageRender(get_texture(game, filepath), 0, 0, 1, 1, zorder, get_rect(game, 0.0, 0.0, 1.0, 1.0))
 end
-export BackgroundImage
+export BackgroundImageRender
 
-function render(image::Image, game::Game)
+function render(image::ImageRender, game::Game)
     image.dest_ref = get_rect(game, image.x, image.y, image.width, image.height)
     task = () -> SDL_RenderCopy(game.renderer, image.texture, C_NULL, image.dest_ref)
     add_render_task!(game, task, image.zorder)
 end
 
-mutable struct Rectangle <: RenderableSystem
+Base.@kwdef mutable struct RectangleRender <: RenderableSystem
     x::Float64
     y::Float64
     width::Float64
     height::Float64
     colour::Colorant
-    zorder::Int64
+    zorder::Int64 = 1
     rect::Base.RefValue{SDL_Rect}
 end
-export Rectangle
+export RectangleRender
 
-function Rectangle(game::Game, x::Float64, y::Float64, width::Float64, height::Float64; colour::Colorant=colorant"white", zorder::Int64=1)
+function RectangleRender(game::Game, x::Float64, y::Float64, width::Float64, height::Float64; colour::Colorant=colorant"white", zorder::Int64=1)
     rect = get_rect(game, x, y, width, height)
-    return Rectangle(x, y, width, height, colour, zorder, rect)
+    return RectangleRender(x, y, width, height, colour, zorder, rect)
 end
 
-function Base.show(io::IO, system::Rectangle)
-    print(io, "Rectangle")
+function Base.show(io::IO, system::RectangleRender)
+    print(io, "RectangleRender")
 end
 
-function render(rectangle::Rectangle, game::Game)
+function render(rectangle::RectangleRender, game::Game)
     rectangle.rect = get_rect(game, rectangle.x, rectangle.y, rectangle.width, rectangle.height)
     task = () -> begin
         r, g, b = colorant_to_rgb(rectangle.colour)
