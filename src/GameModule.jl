@@ -6,22 +6,21 @@ using ..ConstantsModule
 using ..SystemModule
 
 # External Packages 
-using SimpleDirectMediaLayer
-using SimpleDirectMediaLayer.LibSDL2
+using CSFML
+using CSFML.LibCSFML
 using Colors
 
 """
-Game objects contain the SDL window, the SDL renderer, a set of Systems, a message bus and whether the game has been quit or not 
+Game objects contain the SFML window, a set of Systems, a message bus and whether the game has been quit or not 
 """
 Base.@kwdef mutable struct Game{C<:Colorant}
-    window::Ptr{SDL_Window}
-    renderer::Ptr{SDL_Renderer}
+    window::Ptr{sfRenderWindow}
     background_colour::C = colorant"black"
     systems::Dict{String,System} = Dict{String,System}()
     message_bus::Channel{Pair{Pair{DataType,DataType},Function}} = Channel{Pair{Pair{DataType,DataType},Function}}(Inf)
     render_bus::Dict{Int64,Vector{Function}} = Dict{Int64,Vector{Function}}()
     logs::Dict{String,AbstractString} = Dict{String,AbstractString}()
-    target_fps::Float64
+    target_fps::Int64
     quit::Bool = false
 end
 export Game
@@ -47,9 +46,8 @@ end
 export log_message
 
 function get_dimensions(game::Game)
-    w_ref, h_ref = Ref{Cint}(0), Ref{Cint}(0)
-    SDL_GetWindowSize(game.window, w_ref, h_ref)
-    return w_ref[], h_ref[]
+    size = sfRenderWindow_getSize(game.window)
+    return (size.x, size.y)
 end
 export get_dimensions
 
@@ -96,6 +94,7 @@ function send_message!(game::Game, message::M, system::S) where {M<:Message,S<:S
     blacklisted = @invokelatest is_blacklisted(system, message)
     whitelisted = @invokelatest is_whitelisted(system, message)
     if (subscribed && !blacklisted) || whitelisted
+        message.metadata["GAME"] = game
         task = () -> @invokelatest handle_message!(system, message)
         put!(game.message_bus, (typeof(system) => typeof(message)) => task)
     end
@@ -103,7 +102,7 @@ end
 
 function send_important_message!(game::Game, message::M) where {M<:Message}
     for system in values(game.systems)
-        send_important_message!(message, system)
+        send_important_message!(game, message, system)
     end
 end
 export send_important_message!
@@ -111,11 +110,12 @@ export send_important_message!
 """
 Send an important message to a specific game system. Only sends the message if the system is subscribed AND not blacklisted, OR if the system is whitelisted.
 """
-function send_important_message!(message::M, system::S) where {M<:Message,S<:System}
+function send_important_message!(game::Game, message::M, system::S) where {M<:Message,S<:System}
     subscribed = @invokelatest is_subscribed(system, message)
     blacklisted = @invokelatest is_blacklisted(system, message)
     whitelisted = @invokelatest is_whitelisted(system, message)
     if (subscribed && !blacklisted) || whitelisted
+        message.metadata["GAME"] = game
         @invokelatest handle_message!(system, message)
     end
 end

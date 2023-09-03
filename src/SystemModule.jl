@@ -18,17 +18,17 @@ function handle_message!(system::System, message::Message)
 end
 export handle_message!
 
-function is_subscribed(system::System, message::Message)
+function is_subscribed(::System, ::Message)
     return false
 end
 export is_subscribed
 
-function is_whitelisted(system::System, message::Message)
+function is_whitelisted(::System, ::Message)
     return false
 end
 export is_whitelisted
 
-function is_blacklisted(system::System, message::Message)
+function is_blacklisted(::System, ::Message)
     return false
 end
 export is_blacklisted
@@ -59,23 +59,23 @@ Message which tells a system to quit.
 This usually means clearing any memory the system is taking up.
 """
 Base.@kwdef mutable struct QuitMessage <: Message
-    metadata::Dict{String, Any} = Dict{String, Any}()
+    metadata::Dict{String,Any} = Dict{String,Any}()
 end
 export QuitMessage
 
 """
 If a system is told to quit, run the quit function.
 """
-function handle_message!(system::System, message::QuitMessage)
+function handle_message!(system::System, ::QuitMessage)
     quit(system)
 end
 
 """
 Most systems don't need to do anything when they quit.
 """
-function quit(system::System) end
+function quit(::System) end
 
-function handle_message!(composite_system::CompositeSystem, message::QuitMessage)
+function handle_message!(composite_system::CompositeSystem, ::QuitMessage)
     quit.(values(composite_system.subsystems))
 end
 

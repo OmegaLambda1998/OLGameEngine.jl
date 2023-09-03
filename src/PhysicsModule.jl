@@ -6,6 +6,8 @@ using ..SystemModule
 using ..GameModule
 
 # External Packages 
+using CSFML
+using CSFML.LibCSFML
 
 abstract type PhysicsSystem <: System end
 export PhysicsSystem
@@ -14,7 +16,7 @@ abstract type Hitbox <: PhysicsSystem end
 export Hitbox
 
 Base.@kwdef mutable struct PhysicsStepMessage <: Message
-    dt::Float64
+    dt::sfTime
     metadata::Dict{String,Any} = Dict{String,Any}()
 end
 export PhysicsStepMessage

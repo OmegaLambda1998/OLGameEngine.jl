@@ -47,6 +47,10 @@ mutable struct Paddle <: EntitySystem
     subsystems::Dict{String,System}
 end
 
+SystemModule.is_subscribed(system::Paddle, message::EventMessage) = true
+SystemModule.is_subscribed(system::Paddle, message::RenderMessage) = true
+SystemModule.is_subscribed(system::Paddle, message::PhysicsStepMessage) = true
+
 function Paddle(game::Game, side::String)
     width = 0.015
     height = 0.15
@@ -75,10 +79,6 @@ end
 function get_renderer(paddle::Paddle)
     return paddle.subsystems["renderer"]
 end
-
-SystemModule.is_subscribed(system::Paddle, message::EventMessage) = true
-SystemModule.is_subscribed(system::Paddle, message::RenderMessage) = true
-SystemModule.is_subscribed(system::Paddle, message::PhysicsStepMessage) = true
 
 function SystemModule.handle_message!(paddle::Paddle, message::PhysicsStepMessage)
     physics_object = get_physics(paddle)

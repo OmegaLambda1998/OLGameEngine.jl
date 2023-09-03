@@ -5,35 +5,25 @@ module InputModule
 using ..SystemModule
 
 # External Packages 
-using SimpleDirectMediaLayer
-using SimpleDirectMediaLayer.LibSDL2
+using CSFML 
+using CSFML.LibCSFML 
 
 abstract type InputMessage <: Message end
 export InputMessage
 
+
 """
-A message containing an SDL Event
+A message containing an SFML Event
 """
 Base.@kwdef mutable struct EventMessage <: InputMessage
-    event::SDL_Event
+    event::sfEvent
     metadata::Dict{String, Any} = Dict{String, Any}()
 end
 export EventMessage
 
-function Base.show(io::IO, msg::EventMessage)
-    event = msg.event
-    event_type = event.type
-    if event_type == SDL_KEYDOWN
-        scan_code = event.key.keysym.scancode
-        print(io, "$(typeof(msg)): $(string(scan_code))")
-    else
-        print(io, "$(typeof(msg)): $(string(event_type))")
-    end
-end
-
 """
-A system which handles SDL events
-Expected to have a field `targets::Vector{<:SDL_EventType}`
+A system which handles SFML events
+Expected to have a field `targets::Vector{<:sfEventType}`
 """
 abstract type EventHandlerSystem <: System end
 export EventHandlerSystem
@@ -43,7 +33,7 @@ function SystemModule.is_subscribed(system::EventHandlerSystem, message::EventMe
 end
 
 """
-Handle generic SDL_Event's
+Handle generic sfEvent's
 """
 abstract type GenericEventHandler <: EventHandlerSystem end
 export GenericEventHandler
@@ -54,7 +44,7 @@ function SystemModule.handle_message!(system::GenericEventHandler, message::Even
     end
 end
 
-function handle_event!(system::GenericEventHandler, event::SDL_Event)
+function handle_event!(system::GenericEventHandler, event::sfEvent)
     error("System $(typeof(system)) does not have a handle_event! function for event $(event.type)")
 end
 export handle_event!
@@ -63,14 +53,14 @@ abstract type KeyHandler <: EventHandlerSystem end
 export KeyHandler
 
 function SystemModule.handle_message!(system::KeyHandler, message::EventMessage)
-    if (message.event.type == SDL_KEYDOWN) || (message.event.type == SDL_KEYUP)
+    if (message.event.type == sfEvtKeyPressed) || (message.event.type == sfEvtKeyReleased)
         if message.event.key.keysym.scancode in system.targets
             @invokelatest handle_event!(system, message.event)
         end
     end
 end
 
-function handle_event!(system::KeyHandler, event::SDL_Event)
+function handle_event!(system::KeyHandler, event::sfEvent)
     error("System $(typeof(system)) does not have a handle_event! function for event $(event.type)")
 end
 

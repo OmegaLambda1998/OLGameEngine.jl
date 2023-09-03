@@ -27,76 +27,41 @@ include("EntityModule.jl")
 using .EntityModule
 
 # External Packages
-using SimpleDirectMediaLayer
-using SimpleDirectMediaLayer.LibSDL2
+using CSFML
+using CSFML.LibCSFML
 using Colors
 
 """
 Setup everything needed, including the Window, the Renderer, and the Game object
 """
 function setup(toml::Dict{String,Any})
-    @info "Setting SDL attributes"
-    attributes = get(toml, "ATTRIBUTES", Dict{String,Any}())
-    for (attribute, value) in attributes
-        @debug "Setting $attribute to $value"
-        SDL_GL_SetAttribute(attribute, value)
-    end
-
-    @info "Initialising"
-    @assert SDL_Init(SDL_INIT_EVERYTHING) == 0 "error initializing SDL: $(unsafe_string(SDL_GetError()))"
+    @debug "Running with $(Threads.nthreads()) Threads."
+    @info "Setting Window Styles"
 
     @info "Creating Window"
     window_opts = get(toml, "WINDOW", Dict{String,Any}())
-    str_to_win = Dict{String,Any}(
-        "centered" => SDL_WINDOWPOS_CENTERED,
-        "undefined" => SDL_WINDOWPOS_UNDEFINED,
-    )
-    name = get(window_opts, "NAME", "OLGameEngine")
-    @debug "Window name: $name"
-    x = get(window_opts, "X", "centered")
-    if x isa String
-        x = str_to_win[x]
-    end
-    @debug "Window x: $x"
-    y = get(window_opts, "Y", "centered")
-    if y isa String
-        y = str_to_win[y]
-    end
-    @debug "Window y: $y"
-    w = get(window_opts, "WIDTH", 1000)
-    @debug "Window w: $w"
-    h = get(window_opts, "HEIGHT", 1000)
-    @debug "Window h: $h"
-    window = SDL_CreateWindow(name, x, y, w, h, SDL_WINDOW_SHOWN)
-    resizable = get(window_opts, "RESIZABLE", true)
-    if resizable
-        @debug "Resizable window"
-        SDL_SetWindowResizable(window, SDL_TRUE)
-    end
-
-    @info "Creating Renderer"
-    render_opts = get(toml, "RENDERER", Dict{String,Any}())
-    flags = get(render_opts, "FLAGS", Vector{String}())
-    render_flags = reduce(|, map(k -> str_to_flag[k], flags))
-    renderer = SDL_CreateRenderer(window, -1, render_flags)
-
-    @info "Setting Hints"
-    hints = get(toml, "HINTS", Dict{String,Any}())
-    for (hint, value) in hints
-        SDL_SetHint(hint, value)
-    end
-
+    title = get(toml, "TITLE", "OLGameEngine")
+    @debug "Window title: $title"
+    width = get(window_opts, "WIDTH", 1000)
+    @debug "Window width: $width"
+    height = get(window_opts, "HEIGHT", 1000)
+    @debug "Window height: $height"
+    bits_per_pixel = get(window_opts, "BITS_PER_PIXEL", 32)
+    @debug "Window bits per pixel: $bits_per_pixel"
+    style_str = get(window_opts, "STYLE", ["sfDefaultStyle"])
+    style = reduce(|, map(s -> str_to_attr[s], style_str))
+    mode = sfVideoMode(width, height, bits_per_pixel)
+    window = sfRenderWindow_create(mode, title, style, C_NULL)
 
     @info "Creating Game"
     game_opts = get(toml, "GAME", Dict{String,Any}())
     background_colour = parse(Colorant, get(game_opts, "BACKGROUND_COLOUR", "black"))
-    target_fps = get(game_opts, "TARGET_FPS", 60)
-    if target_fps == "Inf"
-        target_fps = Inf
+    target_fps = get(game_opts, "TARGET_FPS", 0)
+    if target_fps > 0
+        @debug "Targeting $target_fps FPS"
+        sfRenderWindow_setFramerateLimit(window, target_fps)
     end
-    target_fps = Float64(target_fps)
-    @debug "Targeting $target_fps FPS"
-    game = Game(window=window, renderer=renderer, background_colour=background_colour, target_fps=target_fps)
+    game = Game(window=window, background_colour=background_colour, target_fps=target_fps)
 
     message_log = joinpath(toml["GLOBAL"]["OUTPUT_PATH"], "messages.log")
     add_log!(game, "message_log", message_log)
@@ -131,8 +96,7 @@ Clear the render buffer and prepare for the next frame
 """
 function prep_stage(game::Game)
     r, g, b = colorant_to_rgb(game.background_colour)
-    SDL_SetRenderDrawColor(game.renderer, r, g, b, 255)
-    SDL_RenderClear(game.renderer)
+    sfRenderWindow_clear(game.window, sfColor_fromRGB(r, g, b))
 end
 
 """
@@ -140,12 +104,12 @@ Read inputs and send `EventMessage`
 """
 function input_stage(game::Game)
     quit = false
-    event_ref = Ref{SDL_Event}()
-    while Bool(SDL_PollEvent(event_ref))
+    event_ref = Ref{sfEvent}()
+    while Bool(sfRenderWindow_pollEvent(game.window, event_ref))
         evt = event_ref[]
         evt_ty = evt.type
         # Handle quitting
-        if (evt_ty == SDL_QUIT)
+        if (evt_ty == sfEvtClosed)
             quit = true
             break
         else
@@ -158,7 +122,7 @@ end
 """
 Handle physics
 """
-function physics_stage(game::Game, dt::Float64)
+function physics_stage(game::Game, dt::sfTime)
     send_important_message!(game, PhysicsStepMessage(dt=dt))
 end
 
@@ -190,7 +154,7 @@ end
 Render everything (including gui) to the render buffer
 """
 function render_stage(game::Game)
-    send_important_message!(game, RenderMessage(game=game))
+    send_important_message!(game, RenderMessage())
 end
 
 """
@@ -204,7 +168,7 @@ function draw_stage(game::Game)
             task()
         end
     end
-    SDL_RenderPresent(game.renderer)
+    sfRenderWindow_display(game.window)
 end
 
 """
@@ -223,9 +187,9 @@ Main game loop
 function main_loop(game::Game)
     try
         errormonitor(Threads.@spawn handle_all_messages!(game))
-        elapsed = 0.0
+        clock = sfClock_create()
         while !game.quit
-            start_frame = SDL_GetPerformanceCounter()
+            elapsed = sfClock_restart(clock)
             prep_stage(game)
             game.quit = input_stage(game)
             physics_stage(game, elapsed)
@@ -235,24 +199,16 @@ function main_loop(game::Game)
             render_stage(game)
             gui_stage(game)
             draw_stage(game)
-            end_frame = SDL_GetPerformanceCounter()
-            elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
-            fps = (1.0 / elapsed)
-            if (fps > game.target_fps)
-                delay = 1000.0 * ((1.0 / game.target_fps) - elapsed)
-                SDL_Delay(floor(delay))
-            end
-            end_frame = SDL_GetPerformanceCounter()
-            elapsed = (end_frame - start_frame) / SDL_GetPerformanceFrequency()
-            fps = (1.0 / elapsed)
-            send_important_message!(game, TickMessage(dt=elapsed))
+            fps = (1.0 / sfTime_asSeconds(elapsed))
+            print("\e[2K")
+            print("\e[1G")
+            print("FPS: $(fps)")
+            #break
         end
     finally
         @info "Quitting"
         send_important_message!(game, QuitMessage())
-        SDL_DestroyRenderer(game.renderer)
-        SDL_DestroyWindow(game.window)
-        SDL_Quit()
+        sfRenderWindow_destroy(game.window)
     end
 end
 

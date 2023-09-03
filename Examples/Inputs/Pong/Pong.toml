@@ -1,35 +1,25 @@
 [ global ]
     output_path = "../../Outputs/Pong"
 
-[ attributes ]
-    SDL_GL_MULTISAMPLEBUFFERS = 16
-    SDL_GL_MULTISAMPLESAMPLES = 16
-
 [ window ]
-    name = "Pong"
+    title = "Pong"
     width = 500
     height = 500
 
-[ renderer ]
-    flags = ["SDL_RENDERER_ACCELERATED", "SDL_RENDERER_PRESENTVSYNC"]
-
-[ hints ]
-    SDL_HINT_RENDER_SCALE_QUALITY = "linear"
-
 [ game ]
     background_colour = "black"
-    target_fps = 60
+    target_fps = 0
     [ game.components ]
-        [ game.components.title ]
-            file = "./components/title.jl"
+        #[ game.components.title ]
+        #    file = "./components/title.jl"
         [ game.components.centre_wall ]
             file = "./components/centre_wall.jl"
-        [ game.components.left_paddle ]
-            file = "./components/paddle.jl"
-            args = [ "left" ] 
-        [ game.components.right_paddle ]
-            file = "./components/paddle.jl"
-            args = [ "right" ] 
+        #[ game.components.left_paddle ]
+        #    file = "./components/paddle.jl"
+        #    args = [ "left" ] 
+        #[ game.components.right_paddle ]
+        #    file = "./components/paddle.jl"
+        #    args = [ "right" ] 
         #[ game.components.ball ]
         #    file = "./components/ball.jl"
    

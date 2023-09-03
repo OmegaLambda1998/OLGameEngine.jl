@@ -38,16 +38,23 @@ end
 
 function main()
     args = get_args()
-    verbose = args["verbose"]
     toml_path = args["input"]
-    toml = setup_input(toml_path, verbose)
-    if args["profile"]
+    verbose = args["verbose"]
+    profile = args["profile"]
+    return main(toml_path, verbose, profile)
+end
+export main
+
+function main(toml_path::AbstractString, verbose::Bool, profile::Bool)
+toml = setup_input(toml_path, verbose)
+    if profile 
+        run_OLGameEngine(toml)
         @profilehtml run_OLGameEngine(toml)
     else
         run_OLGameEngine(toml)
     end
+
 end
-export main
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()
