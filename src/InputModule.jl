@@ -54,7 +54,7 @@ export KeyHandler
 
 function SystemModule.handle_message!(system::KeyHandler, message::EventMessage)
     if (message.event.type == sfEvtKeyPressed) || (message.event.type == sfEvtKeyReleased)
-        if message.event.key.keysym.scancode in system.targets
+        if message.event.key.code in system.targets
             @invokelatest handle_event!(system, message.event)
         end
     end

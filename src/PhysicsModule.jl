@@ -24,10 +24,10 @@ export PhysicsStepMessage
 SystemModule.is_subscribed(system::PhysicsSystem, message::PhysicsStepMessage) = true
 
 function SystemModule.handle_message!(system::PhysicsSystem, message::PhysicsStepMessage)
-    step_physics!(system, message.dt)
+    step_physics!(system, sfTime_asSeconds(message.dt))
 end
 
-function step_physics!(system::PhysicsSystem, dt::Float64) end
+function step_physics!(::PhysicsSystem, ::Float32) end
 export step_physics!
 
 Base.@kwdef mutable struct Physics2DObject <: PhysicsSystem
@@ -53,7 +53,7 @@ Base.@kwdef mutable struct Physics2DObject <: PhysicsSystem
 end
 export Physics2DObject
 
-function step_physics!(system::Physics2DObject, dt::Float64)
+function step_physics!(system::Physics2DObject, dt::Float32)
     # Update the velocity of the object
     Δdx = (system.ddx * dt) - (system.dx * system.friction)
     Δdy = (system.ddy * dt) - (system.dy * system.friction)

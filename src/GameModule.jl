@@ -15,6 +15,8 @@ Game objects contain the SFML window, a set of Systems, a message bus and whethe
 """
 Base.@kwdef mutable struct Game{C<:Colorant}
     window::Ptr{sfRenderWindow}
+    width::UInt32 = sfRenderWindow_getSize(window).x
+    height::UInt32 = sfRenderWindow_getSize(window).y
     background_colour::C = colorant"black"
     systems::Dict{String,System} = Dict{String,System}()
     message_bus::Channel{Pair{Pair{DataType,DataType},Function}} = Channel{Pair{Pair{DataType,DataType},Function}}(Inf)

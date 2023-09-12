@@ -14,12 +14,12 @@
         #    file = "./components/title.jl"
         [ game.components.centre_wall ]
             file = "./components/centre_wall.jl"
-        #[ game.components.left_paddle ]
-        #    file = "./components/paddle.jl"
-        #    args = [ "left" ] 
-        #[ game.components.right_paddle ]
-        #    file = "./components/paddle.jl"
-        #    args = [ "right" ] 
-        #[ game.components.ball ]
-        #    file = "./components/ball.jl"
+        [ game.components.left_paddle ]
+            file = "./components/paddle.jl"
+            args = [ "left" ] 
+        [ game.components.right_paddle ]
+            file = "./components/paddle.jl"
+            args = [ "right" ] 
+        [ game.components.ball ]
+            file = "./components/ball.jl"
    
